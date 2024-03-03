@@ -118,7 +118,9 @@ class Scraper:
                     if parent_str != 'Content':
                         # We just opened a content chapter
                         element.click()
-                        self.find_widgets(span_str)
+                        for widget in self.find_widgets(span_str):
+
+                            self.chat_with_mathgpt()
 
                         
 
@@ -126,24 +128,49 @@ class Scraper:
             if not found:
                 break
 
+    def chat_with_mathgpt(self):
+        print("Chatting")
+        sleep(1)
+
+        clean_up = self.driver.find_element(By.ID, "cleanup-button")
+        clean_up.click()
+
+
+        sleep(1)
+
+
     def find_widgets(self, span_str):
         print(span_str)
 
-        xpath_pattern = "//*[contains(@class, 'widget')]"
+        xpath_pattern = "//*[contains(@class, 'widget') and not(contains(@class, 'widget-overlay'))]"
+
 
         wait = WebDriverWait(self.driver, 10)
-        widgets = wait.until(EC.visibility_of_any_elements_located((By.XPATH, xpath_pattern)))
+        #widgets = wait.until(EC.visibility_of_any_elements_located((By.XPATH, xpath_pattern)))
+        sleep(1)
+        widgets = self.driver.find_elements(By.XPATH, xpath_pattern)
 
         for widget in widgets:
+            widget_type = widget.get_attribute("data-widget-type")
+            if widget_type == "link":
+                continue
 
             hover = ActionChains(self.driver).move_to_element(widget)
             hover.perform()
-            print(widget.get_attribute('outerHTML'))
+            sleep(1)
             widget.click()
+            sleep(1)
+
+            dropdown = self.driver.find_element(By.ID, "activity-dropdown")
+            ask_question_option = dropdown.find_element(By.XPATH, "//div[@id='activity-dropdown']//div[@role='button' and contains(., 'Ask a Question')]")
+            ask_question_option.click()
+
+            yield
+  
 
 
-
-        sleep(100)
+        #print('sleeping')
+        #sleep(100)
 
 
 
@@ -164,6 +191,7 @@ class Scraper:
 
 if __name__ == '__main__':
       with Scraper() as scraper:
+        sleep(10)
         scraper.log_in()
         scraper.click_on_course('College Algebra')
         scraper.expand_sidebar()
