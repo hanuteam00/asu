@@ -9,7 +9,18 @@ from selenium.webdriver.common.action_chains import ActionChains
 import os
 from dotenv import load_dotenv
 
+from vivchain import Agent
+
 load_dotenv()
+
+def print_in_red(s):
+     print(f'\x1b[0;37;41m{s}\x1b[0m')
+
+def print_in_blue(s):
+     print(f'\x1b[0;37;44m{s}\x1b[0m')
+
+def print_in_green(s):
+     print(f'\x1b[0;37;42m{s}\x1b[0m')
 
 class Scraper:
 
@@ -128,9 +139,96 @@ class Scraper:
             if not found:
                 break
 
+    def wait_for_bot_to_type(self):
+
+        # Wait for Skip Generating to show up and be dismissed
+        wait = WebDriverWait(self.driver, 10)
+        wait.until(EC.visibility_of_element_located((By.XPATH, "//span[text()='Skip Generating']")))
+        wait = WebDriverWait(self.driver, 30)
+        wait.until(EC.invisibility_of_element_located((By.XPATH, "//span[text()='Skip Generating']")))
+        sleep(1)
+
+
+    def send_to_bot(self, message):
+        editor_xpath = "//div[@contenteditable='true']"
+
+        # Wait for the editor to be visible and ready for input
+        wait = WebDriverWait(self.driver, 10)
+        editor = wait.until(EC.visibility_of_element_located((By.XPATH, editor_xpath)))
+
+        for m in message.split('\n'):
+            editor.send_keys(m)
+            editor.send_keys(Keys.SHIFT, Keys.ENTER)
+        sleep(1)
+
+
+        send_button_xpath = "//div[@data-name='send-button-icon']"
+
+        # Wait for the send button to be clickable
+        wait = WebDriverWait(self.driver, 10)
+        send_button = wait.until(EC.element_to_be_clickable((By.XPATH, send_button_xpath)))
+
+        # Click the send button
+        send_button.click()
+
+    def get_chat_history(self):
+
+        chat_history = []
+
+        wait = WebDriverWait(self.driver, 10)
+        chat_list = wait.until(EC.visibility_of_element_located((By.ID, "chat-list")))
+
+        messages = chat_list.find_elements(By.XPATH, ".//div[@data-name]")
+
+        for message in messages:
+            message_type = 'TEACHER' if message.get_attribute('data-name').startswith('bot') else 'STUDENT'
+            text = ' '.join(p.text for p in message.find_elements(By.TAG_NAME, 'p'))
+            if not text:
+                continue
+
+            chat_history.append({'role': message_type, 'content': text})
+
+        return chat_history
+    
+
+
     def chat_with_mathgpt(self):
         print("Chatting")
-        sleep(1)
+        self.wait_for_bot_to_type()
+        response = self.get_chat_history()[-1]
+        print_in_blue(response)
+
+        student_prompt = \
+"""
+You are roleplaying as an algebra student. Act like a realistic teenager. Act like you are stuck. Be confused.
+Don't be too helpful. And get some questions wrong. Give your teacher incomplete information.
+Don't type too much. Let your teacher guide you.
+
+Act like a student!
+"""
+        student_functions = []
+        student_agent = Agent(
+            system_prompt=student_prompt,
+            functions=student_functions,
+            model='gpt-4-0125-preview',
+            use_CI=False
+        )
+
+        for _ in range(3):
+            response = student_agent.submit(response['content'])
+            print_in_green(response)
+            sleep(1)
+            self.send_to_bot(response)
+            sleep(1)
+            self.wait_for_bot_to_type()
+            response = self.get_chat_history()[-1]
+            print_in_blue(response)
+            sleep(1)
+
+
+        entire_chat = self.get_chat_history()
+
+        sleep(2)
 
         clean_up = self.driver.find_element(By.ID, "cleanup-button")
         clean_up.click()
@@ -191,7 +289,6 @@ class Scraper:
 
 if __name__ == '__main__':
       with Scraper() as scraper:
-        sleep(10)
         scraper.log_in()
         scraper.click_on_course('College Algebra')
         scraper.expand_sidebar()
