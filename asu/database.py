@@ -8,10 +8,10 @@ class Database:
     def __init__(self):
 
         print('Connecting to database...')
-        self.r = redis.Redis(host='us1-content-shiner-38963.upstash.io',
-                             port='38963',
+        self.r = redis.Redis(host='us1-close-pigeon-41232.upstash.io',
+                             port='41232',
                              username='default',
-                             password='920dccbd546c44de89da88c23ee91c3b',
+                             password='13e9b502ee444850bf30f89f6016fa5c',
                              ssl=True,
                              decode_responses=True)
 

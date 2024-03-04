@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-class Database:
+class MGPTDatabase:
     SERVER =  os.getenv('SERVER_URL')
     DB_NAME =  os.getenv('DB_NAME')
     USER =  os.getenv('DB_USER')

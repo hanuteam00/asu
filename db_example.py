@@ -1,8 +1,8 @@
-from database import Database
+from database import MGPTDatabase
 import json
 
 if __name__ == '__main__':
-    with Database() as db:
+    with MGPTDatabase() as db:
         if db:
             contents = db.execute_from_file('content')
             for row in contents:
